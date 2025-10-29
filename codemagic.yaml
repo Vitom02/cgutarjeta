@@ -29,5 +29,3 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
-        distribute_to_testflight: true
-        release_notes: "Build desde Codemagic"
