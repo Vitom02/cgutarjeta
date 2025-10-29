@@ -1,19 +1,13 @@
 workflows:
   ios_release:
     name: iOS Release (App Store)
-    instance_type: mac_mini   # o mac_pro si lo necesitás
+    instance_type: mac_mini
     environment:
-      flutter: stable        # o la versión que uses
+      flutter: stable
       vars:
-        # Variables públicas (no sensibles)
-        APP_BUNDLE_IDENTIFIER: "com.tuempresa.cgu_tarjeta" # REEMPLAZAR
+        APP_BUNDLE_IDENTIFIER: "com.tuempresa.cgu_tarjeta" # reemplazar
         FLUTTER_BUILD_NAME: "1.0.0"
         FLUTTER_BUILD_NUMBER: "1"
-      # Secrets y archivos que subirás por UI (no los guardes en el repo)
-      node: {}
-      # Puedes declarar variables de entorno secretas aquí con nombres; definirás sus valores en Codemagic UI
-      environment_variables:
-        FIREBASE_API_KEY: EncryptedString  # ejemplo (poner secreto en UI)
     scripts:
       - name: Prepare environment
         script: |
@@ -23,28 +17,15 @@ workflows:
           cd ios
           pod install --repo-update || pod install
           cd ..
-      - name: Analyze (opcional)
-        script: |
-          flutter analyze || true
-      - name: Run tests (opcional)
-        script: |
-          flutter test || true
       - name: Build iOS IPA
         script: |
-          # Opciones: flutter build ipa es la forma sencilla; Codemagic se encarga del signing si configuraste App Store Connect API.
+          set -e
           flutter clean
           flutter build ipa --release --no-tree-shake-icons
-          # el .ipa aparecerá en build/ios/ipa/ por defecto
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
-        # Esta sección indica que queremos subir el artifact a App Store Connect.
-        # Si usaste la integración App Store Connect API en Code signing, Codemagic pedirá que asocies la app identifier.
+        use_credentials_from_integration: true
         distribute_to_testflight: true
-        # Opcional: notas para testers
-        release_notes: "Build desde Codemagic - automatizado"
-    triggers:
-      - event: push
-        branch:
-          - main   # cambia por la rama que uses
+        release_notes: "Build desde Codemagic"
