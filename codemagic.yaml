@@ -2,6 +2,8 @@ workflows:
   ios_release:
     name: iOS Release (App Store)
     instance_type: mac_mini
+    integrations:
+      app_store_connect: Vista South
     environment:
       flutter: stable
       vars:
@@ -26,6 +28,6 @@ workflows:
       - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
-        use_credentials_from_integration: true
+        auth: integration
         distribute_to_testflight: true
         release_notes: "Build desde Codemagic"
