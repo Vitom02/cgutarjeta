@@ -1,7 +1,7 @@
 workflows:
   ios_release:
     name: iOS Release (App Store)
-    instance_type: mac_mini
+    instance_type: macos_xcode
     integrations:
       app_store_connect: Vista South
     environment:
