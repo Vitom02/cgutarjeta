@@ -7,7 +7,7 @@ workflows:
     environment:
       flutter: stable
       vars:
-        APP_BUNDLE_IDENTIFIER: "com.tuempresa.cgu_tarjeta" # reemplazar
+        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar
         FLUTTER_BUILD_NAME: "1.0.0"
         FLUTTER_BUILD_NUMBER: "1"
     scripts:
