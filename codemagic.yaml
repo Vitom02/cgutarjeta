@@ -4,6 +4,15 @@ workflows:
     instance_type: mac_mini_m1
     integrations:
       app_store_connect: Vista South
+    code_signing:
+      ios_signing:
+        provisioning_profiles:
+          - bundle_identifier: ${APP_BUNDLE_IDENTIFIER}
+            type: IOS_APP_STORE
+            create: true
+        certificates:
+          - type: IOS_DISTRIBUTION
+            create: true
     environment:
       flutter: stable
       vars:
