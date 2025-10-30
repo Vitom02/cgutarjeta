@@ -11,13 +11,6 @@ workflows:
         FLUTTER_BUILD_NAME: "1.0.0"
         FLUTTER_BUILD_NUMBER: "1"
     scripts:
-      - name: Set up iOS code signing
-        script: |
-          set -e
-          app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE --create
-          keychain initialize
-          keychain add-certificates
-          xcode-project use-profiles
       - name: Prepare environment
         script: |
           set -e
