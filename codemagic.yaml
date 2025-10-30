@@ -2,15 +2,21 @@ workflows:
   ios_release:
     name: iOS Release (App Store)
     instance_type: mac_mini_m1
+    integrations:
+      app_store_connect: Vista South
     environment:
       flutter: stable
       groups:
         - ios_signing
       vars:
-        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta"
+        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar
         FLUTTER_BUILD_NAME: "1.0.0"
         FLUTTER_BUILD_NUMBER: "1"
     scripts:
+      - name: Set up iOS code signing (Automatic via App Store Connect)
+        script: |
+          set -e
+          app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE --create
       - name: Prepare environment
         script: |
           set -e
@@ -19,41 +25,21 @@ workflows:
           cd ios
           pod install --repo-update || pod install
           cd ..
-      - name: Build iOS IPA (signed via integration)
+      - name: Select provisioning profiles in the Xcode project
+        script: |
+          set -e
+          xcode-project use-profiles
+      - name: Build iOS IPA
         script: |
           set -e
           flutter clean
-          flutter build ipa --release --no-tree-shake-icons
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner \
+            --archive-flags "-destination generic/platform=iOS" \
+            --export-options-method app-store
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
-        use_credentials_from_integration: true
-        distribute_to_testflight: true
-        release_notes: "Build desde Codemagic (usando integración de cuenta)"
-
-  ios_unsigned_build:
-    name: iOS Unsigned Build (no publish)
-    instance_type: mac_mini_m1
-    environment:
-      flutter: stable
-      vars:
-        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta"
-        FLUTTER_BUILD_NAME: "1.0.0"
-        FLUTTER_BUILD_NUMBER: "1"
-    scripts:
-      - name: Prepare environment
-        script: |
-          set -e
-          flutter --version
-          flutter pub get
-          cd ios
-          pod install --repo-update || pod install
-          cd ..
-      - name: Build iOS app (no codesign)
-        script: |
-          set -e
-          flutter clean
-          flutter build ios --release --no-codesign
-    artifacts:
-      - build/ios/iphoneos/Runner.app
+        auth: integration
