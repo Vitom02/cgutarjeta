@@ -1,13 +1,13 @@
 workflows:
   ios_release:
     name: iOS Release (App Store)
-      instance_type: mac_mini_m1
+    instance_type: mac_mini_m1
     environment:
       flutter: stable
       groups:
         - ios_signing
       vars:
-        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar si hace falta
+        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta"
         FLUTTER_BUILD_NAME: "1.0.0"
         FLUTTER_BUILD_NUMBER: "1"
     scripts:
@@ -23,7 +23,6 @@ workflows:
         script: |
           set -e
           flutter clean
-          # Usamos flutter build ipa; Codemagic gestionará el signing si la integración está disponible
           flutter build ipa --release --no-tree-shake-icons
     artifacts:
       - build/ios/ipa/*.ipa
