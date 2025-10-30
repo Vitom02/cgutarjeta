@@ -6,16 +6,16 @@ workflows:
       app_store_connect: Vista South
     environment:
       flutter: stable
+      groups:
+        - ios_signing
       vars:
         APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar
         FLUTTER_BUILD_NAME: "1.0.0"
         FLUTTER_BUILD_NUMBER: "1"
     scripts:
-      - name: Set up iOS code signing
+      - name: Set up iOS code signing (Automatic via App Store Connect)
         script: |
           set -e
-          keychain initialize
-          keychain add-certificates
           app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE --create
       - name: Prepare environment
         script: |
