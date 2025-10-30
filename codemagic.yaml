@@ -1,22 +1,16 @@
 workflows:
   ios_release:
     name: iOS Release (App Store)
-    instance_type: mac_mini_m1
-    integrations:
-      app_store_connect: Vista South
+      instance_type: mac_mini_m1
     environment:
       flutter: stable
       groups:
         - ios_signing
       vars:
-        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar
+        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar si hace falta
         FLUTTER_BUILD_NAME: "1.0.0"
         FLUTTER_BUILD_NUMBER: "1"
     scripts:
-      - name: Set up iOS code signing (Automatic via App Store Connect)
-        script: |
-          set -e
-          app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE --create
       - name: Prepare environment
         script: |
           set -e
@@ -25,24 +19,19 @@ workflows:
           cd ios
           pod install --repo-update || pod install
           cd ..
-      - name: Select provisioning profiles in the Xcode project
-        script: |
-          set -e
-          xcode-project use-profiles
-      - name: Build iOS IPA
+      - name: Build iOS IPA (signed via integration)
         script: |
           set -e
           flutter clean
-          xcode-project build-ipa \
-            --workspace ios/Runner.xcworkspace \
-            --scheme Runner \
-            --archive-flags "-destination generic/platform=iOS" \
-            --export-options-method app-store
+          # Usamos flutter build ipa; Codemagic gestionará el signing si la integración está disponible
+          flutter build ipa --release --no-tree-shake-icons
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
-        auth: integration
+        use_credentials_from_integration: true
+        distribute_to_testflight: true
+        release_notes: "Build desde Codemagic (usando integración de cuenta)"
 
   ios_unsigned_build:
     name: iOS Unsigned Build (no publish)
