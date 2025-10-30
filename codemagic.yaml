@@ -43,3 +43,29 @@ workflows:
     publishing:
       app_store_connect:
         auth: integration
+
+  ios_unsigned_build:
+    name: iOS Unsigned Build (no publish)
+    instance_type: mac_mini_m1
+    environment:
+      flutter: stable
+      vars:
+        APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta"
+        FLUTTER_BUILD_NAME: "1.0.0"
+        FLUTTER_BUILD_NUMBER: "1"
+    scripts:
+      - name: Prepare environment
+        script: |
+          set -e
+          flutter --version
+          flutter pub get
+          cd ios
+          pod install --repo-update || pod install
+          cd ..
+      - name: Build iOS app (no codesign)
+        script: |
+          set -e
+          flutter clean
+          flutter build ios --release --no-codesign
+    artifacts:
+      - build/ios/iphoneos/Runner.app
