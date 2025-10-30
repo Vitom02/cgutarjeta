@@ -15,6 +15,7 @@ workflows:
         script: |
           set -e
           keychain initialize
+          app-store-connect create-certificate --type IOS_DISTRIBUTION
           app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE --create
       - name: Prepare environment
         script: |
