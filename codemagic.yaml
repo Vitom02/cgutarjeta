@@ -5,12 +5,13 @@ workflows:
     integrations:
       app_store_connect: Vista South
     environment:
+      flutter: stable
       groups:
         - ios_signing
       vars:
         APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar
-        XCODE_WORKSPACE: "ios/Runner.xcworkspace"
-        XCODE_SCHEME: "Runner"
+        FLUTTER_BUILD_NAME: "1.0.0"
+        FLUTTER_BUILD_NUMBER: "1"
     scripts:
       - name: Set up iOS code signing (Automatic via App Store Connect)
         script: |
@@ -18,9 +19,11 @@ workflows:
           keychain initialize
           # Solo obtiene perfiles, NO crea certificados (usa el certificado del usuario)
           app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE
-      - name: Install CocoaPods dependencies
+      - name: Prepare environment
         script: |
           set -e
+          flutter --version
+          flutter pub get
           cd ios
           pod install --repo-update || pod install
           cd ..
@@ -31,9 +34,10 @@ workflows:
       - name: Build iOS IPA
         script: |
           set -e
+          flutter clean
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner \
             --archive-flags "-destination generic/platform=iOS" \
             --export-options-method app-store
     artifacts:
