@@ -16,7 +16,8 @@ workflows:
         script: |
           set -e
           keychain initialize
-          app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE --create
+          # Solo obtiene perfiles, NO crea certificados (usa el certificado del usuario)
+          app-store-connect fetch-signing-files "$APP_BUNDLE_IDENTIFIER" --type IOS_APP_STORE
       - name: Install CocoaPods dependencies
         script: |
           set -e
