@@ -38,8 +38,8 @@ workflows:
           xcode-project build-ipa \
             --workspace ios/Runner.xcworkspace \
             --scheme Runner \
-            --archive-flags "-destination generic/platform=iOS" \
-            --export-options-method app-store
+            --archive-flags "-destination 'generic/platform=iOS'" \
+            --export-options-plist ios/ExportOptions.plist
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
