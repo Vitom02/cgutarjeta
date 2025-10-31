@@ -38,10 +38,36 @@ workflows:
           xcode-project build-ipa \
             --workspace ios/Runner.xcworkspace \
             --scheme Runner \
-            --archive-flags "-destination 'generic/platform=iOS'" \
-            --export-options-plist ios/ExportOptions.plist
+            --archive-flags "-destination generic/platform=iOS" \
+            --export-options-method app-store
+      - name: Verify IPA file
+        script: |
+          set -e
+          echo "Verificando IPA generado..."
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "ERROR: No se encontró el archivo IPA"
+            exit 1
+          fi
+          echo "IPA encontrado: $IPA_PATH"
+          ls -lh "$IPA_PATH"
+          echo "Tamaño del IPA: $(du -h "$IPA_PATH" | cut -f1)"
+      - name: Verify bundle identifier
+        script: |
+          set -e
+          echo "Verificando Bundle ID..."
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -1)
+          unzip -q -o "$IPA_PATH" -d /tmp/ipa_extract 2>/dev/null || true
+          BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" /tmp/ipa_extract/Payload/Runner.app/Info.plist 2>/dev/null || echo "")
+          echo "Bundle ID en el IPA: $BUNDLE_ID"
+          echo "Bundle ID esperado: $APP_BUNDLE_IDENTIFIER"
+          if [ "$BUNDLE_ID" != "$APP_BUNDLE_IDENTIFIER" ]; then
+            echo "WARNING: Bundle ID no coincide"
+          fi
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
       app_store_connect:
         auth: integration
+        submit_to_testflight: false
+        submit_to_app_store: false
