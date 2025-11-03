@@ -39,8 +39,10 @@
 	</array>
 	<key>UIRequiredDeviceCapabilities</key>
 	<array>
-		<string>armv7</string>
-		<string>telephony</string>
+		<!-- arm64 soporta todos los dispositivos modernos (iPhone 5s en adelante, iPad, iPod Touch) -->
+		<!-- Removido armv7 (solo dispositivos muy antiguos) -->
+		<!-- Removido telephony para permitir iPads e iPod Touch -->
+		<string>arm64</string>
 	</array>
 	<key>CADisableMinimumFrameDurationOnPhone</key>
 	<true/>

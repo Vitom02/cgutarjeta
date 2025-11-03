@@ -33,6 +33,15 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+        
+        // Soportar todas las arquitecturas comunes para máxima compatibilidad en celulares
+        // armeabi-v7a: dispositivos ARM de 32 bits (mayoría de celulares antiguos)
+        // arm64-v8a: dispositivos ARM de 64 bits (celulares modernos)
+        // x86: emuladores y algunos dispositivos Intel (32 bits)
+        // x86_64: emuladores y algunos dispositivos Intel (64 bits)
+        ndk {
+            abiFilters += listOf("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
+        }
     }
 
     signingConfigs {

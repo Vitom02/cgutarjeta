@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     
-    <!-- Configuración para restringir solo a teléfonos -->
+    <!-- Configuración para soportar SOLO CELULARES (NO tablets) -->
+    <!-- Permite teléfonos pequeños y normales, excluye tablets (large, xlarge) -->
     <supports-screens
         android:smallScreens="true"
         android:normalScreens="true"
@@ -8,47 +9,11 @@
         android:xlargeScreens="false"
         android:anyDensity="true" />
     
-    <compatible-screens>
-        <!-- Teléfonos pequeños -->
-        <screen
-            android:screenSize="small"
-            android:screenDensity="ldpi" />
-        <screen
-            android:screenSize="small"
-            android:screenDensity="mdpi" />
-        <screen
-            android:screenSize="small"
-            android:screenDensity="hdpi" />
-        <screen
-            android:screenSize="small"
-            android:screenDensity="xhdpi" />
-        <screen
-            android:screenSize="small"
-            android:screenDensity="xxhdpi" />
-        <screen
-            android:screenSize="small"
-            android:screenDensity="xxxhdpi" />
-        
-        <!-- Teléfonos normales -->
-        <screen
-            android:screenSize="normal"
-            android:screenDensity="ldpi" />
-        <screen
-            android:screenSize="normal"
-            android:screenDensity="mdpi" />
-        <screen
-            android:screenSize="normal"
-            android:screenDensity="hdpi" />
-        <screen
-            android:screenSize="normal"
-            android:screenDensity="xhdpi" />
-        <screen
-            android:screenSize="normal"
-            android:screenDensity="xxhdpi" />
-        <screen
-            android:screenSize="normal"
-            android:screenDensity="xxxhdpi" />
-    </compatible-screens>
+    <!-- Asegurar que características opcionales no excluyan dispositivos -->
+    <!-- telephony: marcado como opcional (false) para permitir dispositivos sin SIM o wifi-only -->
+    <uses-feature
+        android:name="android.hardware.telephony"
+        android:required="false" />
     
     <application
         android:label="cgu_tarjeta"
