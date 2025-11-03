@@ -87,6 +87,41 @@ workflows:
           if [ "$BUNDLE_ID" != "$APP_BUNDLE_IDENTIFIER" ]; then
             echo "WARNING: Bundle ID no coincide"
           fi
+      - name: Verificar app en App Store Connect (Post-upload)
+        script: |
+          set -e
+          echo "=========================================="
+          echo "INFORMACIÓN IMPORTANTE PARA VERIFICAR:"
+          echo "=========================================="
+          echo ""
+          echo "📦 Bundle ID: $APP_BUNDLE_IDENTIFIER"
+          echo "📱 Versión: $FLUTTER_BUILD_NAME"
+          echo "🔢 Build Number: $FLUTTER_BUILD_NUMBER"
+          echo ""
+          echo "✅ El IPA se subió exitosamente a App Store Connect"
+          echo ""
+          echo "⚠️  Si el build no aparece en TestFlight, verifica:"
+          echo ""
+          echo "1. Que la app exista en App Store Connect:"
+          echo "   https://appstoreconnect.apple.com/apps"
+          echo "   - Busca una app con Bundle ID: $APP_BUNDLE_IDENTIFIER"
+          echo "   - Si NO existe, créala primero en App Store Connect"
+          echo ""
+          echo "2. Tiempo de procesamiento:"
+          echo "   - Apple puede tardar 10-60 minutos en procesar el build"
+          echo "   - Ve a: App Store Connect > Tu App > TestFlight"
+          echo "   - Busca el build $FLUTTER_BUILD_NUMBER"
+          echo ""
+          echo "3. Estados posibles del build:"
+          echo "   - 'Procesando' = Apple está validando (normal, espera)"
+          echo "   - 'Listo para probar' = Build disponible"
+          echo "   - 'Problema de procesamiento' = Hay un error (revisa detalles)"
+          echo ""
+          echo "4. Nota importante:"
+          echo "   - TestFlight NO requiere screenshots ni configuraciones adicionales"
+          echo "   - Solo requiere que el IPA sea válido y la app exista"
+          echo ""
+          echo "=========================================="
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
