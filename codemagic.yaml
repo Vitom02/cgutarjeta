@@ -11,8 +11,27 @@ workflows:
       vars:
         APP_BUNDLE_IDENTIFIER: "com.cgu.cguTarjeta" # reemplazar
         FLUTTER_BUILD_NAME: "1.0.0"
-        FLUTTER_BUILD_NUMBER: "1"
+        # FLUTTER_BUILD_NUMBER se genera automáticamente (ver script más abajo)
     scripts:
+      - name: Generate automatic build number
+        script: |
+          set -e
+          # Usa el número de build de Codemagic si está disponible
+          if [ -n "$CM_BUILD_NUMBER" ]; then
+            export FLUTTER_BUILD_NUMBER="$CM_BUILD_NUMBER"
+            echo "Usando número de build de Codemagic: $FLUTTER_BUILD_NUMBER"
+          else
+            # Genera un número único basado en timestamp (segundos desde epoch)
+            # Esto asegura un número único para cada build
+            BUILD_NUMBER=$(date +%s)
+            # Toma solo los últimos 8 dígitos para que sea más manejable (max ~99999999)
+            BUILD_NUMBER=${BUILD_NUMBER: -8}
+            export FLUTTER_BUILD_NUMBER="$BUILD_NUMBER"
+            echo "Generado número de build basado en timestamp: $FLUTTER_BUILD_NUMBER"
+          fi
+          # Guarda la variable para que esté disponible en los siguientes scripts
+          echo "FLUTTER_BUILD_NUMBER=$FLUTTER_BUILD_NUMBER" >> $CM_ENV
+          echo "Build number configurado: $FLUTTER_BUILD_NUMBER"
       - name: Set up iOS code signing (Automatic via App Store Connect)
         script: |
           set -e
@@ -34,12 +53,16 @@ workflows:
       - name: Build iOS IPA
         script: |
           set -e
+          echo "=== Información de Build ==="
+          echo "Bundle ID: $APP_BUNDLE_IDENTIFIER"
+          echo "Build Name (Version): $FLUTTER_BUILD_NAME"
+          echo "Build Number: $FLUTTER_BUILD_NUMBER"
+          echo "============================"
           flutter clean
-          xcode-project build-ipa \
-            --workspace ios/Runner.xcworkspace \
-            --scheme Runner \
-            --archive-flags "-destination generic/platform=iOS" \
-            --export-options-method app-store
+          flutter build ipa \
+            --release \
+            --build-name="$FLUTTER_BUILD_NAME" \
+            --build-number="$FLUTTER_BUILD_NUMBER"
       - name: Verify IPA file
         script: |
           set -e
@@ -67,5 +90,20 @@ workflows:
     artifacts:
       - build/ios/ipa/*.ipa
     publishing:
+      email:
+        recipients:
+          - "vitomuzio02@gmail.com"  # TODO: Agrega tu email aquí para recibir notificaciones
+        notify:
+          success: true
+          failure: false
       app_store_connect:
         auth: integration
+        # Subir a TestFlight automáticamente
+        submit_to_testflight: true
+        # Notificar a grupos beta (opcional - comenta si no usas grupos)
+        # beta_groups:
+        #   - group name 1
+        # Enviar notificaciones por email
+        notify: true
+        # Descomenta la siguiente línea si quieres subir también para revisión de App Store
+        # submit_to_app_store: true
