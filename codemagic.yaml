@@ -16,19 +16,14 @@ workflows:
       - name: Generate automatic build number
         script: |
           set -e
-          # Usa el número de build de Codemagic si está disponible
-          if [ -n "$CM_BUILD_NUMBER" ]; then
-            export FLUTTER_BUILD_NUMBER="$CM_BUILD_NUMBER"
-            echo "Usando número de build de Codemagic: $FLUTTER_BUILD_NUMBER"
-          else
-            # Genera un número único basado en timestamp (segundos desde epoch)
-            # Esto asegura un número único para cada build
-            BUILD_NUMBER=$(date +%s)
-            # Toma solo los últimos 8 dígitos para que sea más manejable (max ~99999999)
-            BUILD_NUMBER=${BUILD_NUMBER: -8}
-            export FLUTTER_BUILD_NUMBER="$BUILD_NUMBER"
-            echo "Generado número de build basado en timestamp: $FLUTTER_BUILD_NUMBER"
-          fi
+          # Genera un número único basado en timestamp para evitar conflictos
+          # Esto asegura un número único para cada build y evita problemas con builds que no llegaron a TestFlight
+          BUILD_NUMBER=$(date +%s)
+          # Toma solo los últimos 7 dígitos para que sea más manejable y único
+          BUILD_NUMBER=${BUILD_NUMBER: -7}
+          export FLUTTER_BUILD_NUMBER="$BUILD_NUMBER"
+          echo "Generado número de build basado en timestamp: $FLUTTER_BUILD_NUMBER"
+          echo "Este número es único y evita conflictos con builds anteriores que no llegaron a TestFlight"
           # Guarda la variable para que esté disponible en los siguientes scripts
           echo "FLUTTER_BUILD_NUMBER=$FLUTTER_BUILD_NUMBER" >> $CM_ENV
           echo "Build number configurado: $FLUTTER_BUILD_NUMBER"
@@ -153,3 +148,6 @@ workflows:
         notify: true
         # IMPORTANTE: No descomentar esto hasta que TestFlight funcione
         # submit_to_app_store: true
+        # Si los builds no aparecen, descomenta las siguientes líneas para debug
+        # force: true  # Fuerza re-subir aunque ya exista
+        # skip_waiting_for_build_processing: false  # Espera el procesamiento completo
