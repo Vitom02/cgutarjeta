@@ -18,15 +18,34 @@ workflows:
           set -e
           # Genera un número único basado en timestamp para evitar conflictos
           # Esto asegura un número único para cada build y evita problemas con builds que no llegaron a TestFlight
-          BUILD_NUMBER=$(date +%s)
-          # Toma solo los últimos 7 dígitos para que sea más manejable y único
-          BUILD_NUMBER=${BUILD_NUMBER: -7}
+          # Usa el timestamp completo (segundos desde 1970) para garantizar un número siempre mayor
+          TIMESTAMP=$(date +%s)
+          # El timestamp actual está en ~1736000000, así que usamos los últimos 9 dígitos
+          # Esto garantiza que cada build tenga un número mayor que el anterior
+          BUILD_NUMBER=${TIMESTAMP: -9}
+          # Elimina el cero inicial si existe para evitar problemas
+          BUILD_NUMBER=$((10#$BUILD_NUMBER))
+          
+          # Asegura que el build number sea mayor que el último usado (6)
+          # Si el número generado es menor o igual a 6, suma 1000 para asegurar que sea mayor
+          LAST_BUILD_NUMBER=6
+          if [ "$BUILD_NUMBER" -le "$LAST_BUILD_NUMBER" ]; then
+            echo "⚠️  WARNING: Build number generado ($BUILD_NUMBER) es menor o igual al último usado ($LAST_BUILD_NUMBER)"
+            BUILD_NUMBER=$((LAST_BUILD_NUMBER + 1))
+            echo "✅ Ajustado a: $BUILD_NUMBER"
+          fi
+          
           export FLUTTER_BUILD_NUMBER="$BUILD_NUMBER"
-          echo "Generado número de build basado en timestamp: $FLUTTER_BUILD_NUMBER"
-          echo "Este número es único y evita conflictos con builds anteriores que no llegaron a TestFlight"
+          echo "=========================================="
+          echo "🔢 GENERANDO BUILD NUMBER"
+          echo "=========================================="
+          echo "Timestamp: $TIMESTAMP"
+          echo "Build Number generado: $FLUTTER_BUILD_NUMBER"
+          echo "Último build number usado: $LAST_BUILD_NUMBER"
+          echo "Este número es único y mayor que cualquier build anterior"
+          echo "=========================================="
           # Guarda la variable para que esté disponible en los siguientes scripts
           echo "FLUTTER_BUILD_NUMBER=$FLUTTER_BUILD_NUMBER" >> $CM_ENV
-          echo "Build number configurado: $FLUTTER_BUILD_NUMBER"
       - name: Set up iOS code signing (Automatic via App Store Connect)
         script: |
           set -e
@@ -48,16 +67,29 @@ workflows:
       - name: Build iOS IPA
         script: |
           set -e
-          echo "=== Información de Build ==="
+          # Verificar que el build number se cargó correctamente
+          if [ -z "$FLUTTER_BUILD_NUMBER" ]; then
+            echo "ERROR: FLUTTER_BUILD_NUMBER no está definido"
+            exit 1
+          fi
+          echo "=========================================="
+          echo "🏗️  INFORMACIÓN DE BUILD"
+          echo "=========================================="
           echo "Bundle ID: $APP_BUNDLE_IDENTIFIER"
           echo "Build Name (Version): $FLUTTER_BUILD_NAME"
           echo "Build Number: $FLUTTER_BUILD_NUMBER"
-          echo "============================"
+          echo "=========================================="
+          echo ""
+          echo "Limpiando build anterior..."
           flutter clean
+          echo ""
+          echo "Compilando IPA con build number: $FLUTTER_BUILD_NUMBER"
           flutter build ipa \
             --release \
             --build-name="$FLUTTER_BUILD_NAME" \
             --build-number="$FLUTTER_BUILD_NUMBER"
+          echo ""
+          echo "✅ Build completado"
       - name: Verify IPA file
         script: |
           set -e
@@ -70,18 +102,53 @@ workflows:
           echo "IPA encontrado: $IPA_PATH"
           ls -lh "$IPA_PATH"
           echo "Tamaño del IPA: $(du -h "$IPA_PATH" | cut -f1)"
-      - name: Verify bundle identifier
+      - name: Verify bundle identifier and build number
         script: |
           set -e
-          echo "Verificando Bundle ID..."
+          echo "=========================================="
+          echo "🔍 VERIFICANDO IPA GENERADO"
+          echo "=========================================="
           IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -1)
+          if [ -z "$IPA_PATH" ]; then
+            echo "❌ ERROR: No se encontró el archivo IPA"
+            exit 1
+          fi
+          echo "IPA encontrado: $IPA_PATH"
+          echo ""
+          # Extraer el IPA para verificar su contenido
           unzip -q -o "$IPA_PATH" -d /tmp/ipa_extract 2>/dev/null || true
+          
+          # Verificar Bundle ID
           BUNDLE_ID=$(/usr/libexec/PlistBuddy -c "Print :CFBundleIdentifier" /tmp/ipa_extract/Payload/Runner.app/Info.plist 2>/dev/null || echo "")
           echo "Bundle ID en el IPA: $BUNDLE_ID"
           echo "Bundle ID esperado: $APP_BUNDLE_IDENTIFIER"
           if [ "$BUNDLE_ID" != "$APP_BUNDLE_IDENTIFIER" ]; then
-            echo "WARNING: Bundle ID no coincide"
+            echo "❌ ERROR: Bundle ID no coincide"
+            exit 1
           fi
+          echo "✅ Bundle ID correcto"
+          echo ""
+          
+          # Verificar Build Number
+          IPA_BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" /tmp/ipa_extract/Payload/Runner.app/Info.plist 2>/dev/null || echo "")
+          echo "Build Number en el IPA: $IPA_BUILD_NUMBER"
+          echo "Build Number esperado: $FLUTTER_BUILD_NUMBER"
+          if [ "$IPA_BUILD_NUMBER" != "$FLUTTER_BUILD_NUMBER" ]; then
+            echo "❌ ERROR: Build Number no coincide"
+            echo "   El IPA tiene: $IPA_BUILD_NUMBER"
+            echo "   Se esperaba: $FLUTTER_BUILD_NUMBER"
+            exit 1
+          fi
+          echo "✅ Build Number correcto"
+          echo ""
+          echo "Verificando que el build number sea mayor que el último usado..."
+          LAST_BUILD_NUMBER=6
+          if [ "$IPA_BUILD_NUMBER" -le "$LAST_BUILD_NUMBER" ]; then
+            echo "❌ ERROR: Build Number ($IPA_BUILD_NUMBER) debe ser mayor que $LAST_BUILD_NUMBER"
+            exit 1
+          fi
+          echo "✅ Build Number es mayor que el último usado ($LAST_BUILD_NUMBER)"
+          echo "=========================================="
       - name: Verificar estado después del upload
         script: |
           set -e
