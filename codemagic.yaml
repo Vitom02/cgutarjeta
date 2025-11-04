@@ -65,6 +65,115 @@ workflows:
           cd ios
           pod install --repo-update || pod install
           cd ..
+      - name: Verificar imágenes reales de íconos iOS
+        script: |
+          set -e
+          echo "=========================================="
+          echo "🖼️  VERIFICANDO IMÁGENES REALES DE iOS"
+          echo "=========================================="
+          
+          ICON_DIR="ios/Runner/Assets.xcassets/AppIcon.appiconset"
+          
+          # Verificar que el directorio existe
+          if [ ! -d "$ICON_DIR" ]; then
+            echo "❌ ERROR: Directorio de íconos no existe: $ICON_DIR"
+            exit 1
+          fi
+          
+          # Verificar el ícono CRÍTICO de 1024x1024 (obligatorio para App Store)
+          ICON_1024="$ICON_DIR/Icon-App-1024x1024@1x.png"
+          echo ""
+          echo "🔍 Verificando ícono de 1024x1024 (OBLIGATORIO para App Store)..."
+          
+          if [ ! -f "$ICON_1024" ]; then
+            echo "❌ ERROR: Falta el archivo de imagen: Icon-App-1024x1024@1x.png"
+            echo "   Regenerando íconos..."
+            flutter pub run flutter_launcher_icons:main
+            if [ ! -f "$ICON_1024" ]; then
+              echo "❌ ERROR: El ícono de 1024x1024 no se generó correctamente"
+              exit 1
+            fi
+          fi
+          
+          # Verificar tamaño real de la imagen usando sips (macOS)
+          if command -v sips >/dev/null 2>&1; then
+            ICON_WIDTH=$(sips -g pixelWidth "$ICON_1024" 2>/dev/null | grep pixelWidth | awk '{print $2}')
+            ICON_HEIGHT=$(sips -g pixelHeight "$ICON_1024" 2>/dev/null | grep pixelHeight | awk '{print $2}')
+            
+            echo "   Tamaño real de la imagen: ${ICON_WIDTH}x${ICON_HEIGHT}"
+            
+            if [ -z "$ICON_WIDTH" ] || [ -z "$ICON_HEIGHT" ]; then
+              echo "❌ ERROR: No se pudo leer las dimensiones de la imagen"
+              echo "   El archivo puede estar corrupto o no ser una imagen válida"
+              exit 1
+            fi
+            
+            if [ "$ICON_WIDTH" != "1024" ] || [ "$ICON_HEIGHT" != "1024" ]; then
+              echo "❌ ERROR: El ícono de 1024x1024 NO tiene el tamaño correcto"
+              echo "   Tamaño actual: ${ICON_WIDTH}x${ICON_HEIGHT}"
+              echo "   Tamaño requerido: 1024x1024"
+              echo "   Regenerando íconos con el tamaño correcto..."
+              flutter pub run flutter_launcher_icons:main
+              
+              # Verificar nuevamente después de regenerar
+              ICON_WIDTH=$(sips -g pixelWidth "$ICON_1024" 2>/dev/null | grep pixelWidth | awk '{print $2}')
+              ICON_HEIGHT=$(sips -g pixelHeight "$ICON_1024" 2>/dev/null | grep pixelHeight | awk '{print $2}')
+              
+              if [ "$ICON_WIDTH" != "1024" ] || [ "$ICON_HEIGHT" != "1024" ]; then
+                echo "❌ ERROR: El ícono sigue teniendo el tamaño incorrecto después de regenerar"
+                echo "   Verifica que el ícono fuente (Android) tenga al menos 1024x1024 píxeles"
+                exit 1
+              fi
+            fi
+            
+            echo "✅ Ícono de 1024x1024 tiene el tamaño correcto"
+            
+            # Verificar que la imagen no esté corrupta
+            if ! sips -s format png "$ICON_1024" >/dev/null 2>&1; then
+              echo "❌ ERROR: La imagen está corrupta o no es un PNG válido"
+              exit 1
+            fi
+            echo "✅ La imagen es válida y no está corrupta"
+            
+          else
+            # Si sips no está disponible, al menos verificar que el archivo existe y tiene tamaño
+            FILE_SIZE=$(stat -f%z "$ICON_1024" 2>/dev/null || stat -c%s "$ICON_1024" 2>/dev/null || echo "0")
+            if [ "$FILE_SIZE" -lt 1000 ]; then
+              echo "⚠️  WARNING: El archivo es muy pequeño (${FILE_SIZE} bytes), puede estar corrupto"
+            else
+              echo "✅ Archivo existe y tiene tamaño razonable (${FILE_SIZE} bytes)"
+            fi
+          fi
+          
+          # Verificar otros íconos importantes
+          echo ""
+          echo "🔍 Verificando otros íconos requeridos..."
+          MISSING_COUNT=0
+          
+          for icon in \
+            "Icon-App-60x60@3x.png" \
+            "Icon-App-60x60@2x.png" \
+            "Icon-App-40x40@3x.png" \
+            "Icon-App-40x40@2x.png" \
+            "Icon-App-29x29@3x.png" \
+            "Icon-App-29x29@2x.png"; do
+            if [ ! -f "$ICON_DIR/$icon" ]; then
+              echo "⚠️  Falta: $icon"
+              MISSING_COUNT=$((MISSING_COUNT + 1))
+            fi
+          done
+          
+          if [ "$MISSING_COUNT" -gt 0 ]; then
+            echo "⚠️  Faltan $MISSING_COUNT íconos, regenerando..."
+            flutter pub run flutter_launcher_icons:main
+          else
+            echo "✅ Todos los íconos requeridos están presentes"
+          fi
+          
+          echo ""
+          echo "=========================================="
+          echo "✅ Verificación de imágenes completada"
+          echo "=========================================="
       - name: Select provisioning profiles in the Xcode project
         script: |
           set -e
