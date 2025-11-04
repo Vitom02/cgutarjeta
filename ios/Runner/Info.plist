@@ -11,7 +11,7 @@
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleInfoDictionaryVersion</key>
-	<string>6.0</string>
+	<string>7.0</string>
 	<key>CFBundleName</key>
 	<string>CGU Tarjeta Digital</string>
 	<key>CFBundlePackageType</key>
@@ -22,6 +22,8 @@
 	<string>????</string>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Esta aplicación utiliza el micrófono para permitir el ingreso de scores de golf mediante reconocimiento de voz, facilitando el registro rápido y preciso de los resultados durante el juego.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Esta aplicación utiliza el reconocimiento de voz para permitir el ingreso de scores de golf mediante comandos de voz, facilitando el registro rápido y preciso de los resultados durante el juego.</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
