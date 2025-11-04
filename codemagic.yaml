@@ -27,7 +27,7 @@ workflows:
           BUILD_NUMBER=$((10#$BUILD_NUMBER))
           
           # Asegura que el build number sea mayor que el último usado (6)
-          # Si el número generado es menor o igual a 6, suma 1000 para asegurar que sea mayor
+          # Si el número generado es menor o igual a 6, ajusta a 7 como mínimo
           LAST_BUILD_NUMBER=6
           if [ "$BUILD_NUMBER" -le "$LAST_BUILD_NUMBER" ]; then
             echo "⚠️  WARNING: Build number generado ($BUILD_NUMBER) es menor o igual al último usado ($LAST_BUILD_NUMBER)"
@@ -35,17 +35,22 @@ workflows:
             echo "✅ Ajustado a: $BUILD_NUMBER"
           fi
           
+          # Exportar la variable
           export FLUTTER_BUILD_NUMBER="$BUILD_NUMBER"
+          
+          # Guardar en CM_ENV para que esté disponible en los siguientes scripts
+          echo "FLUTTER_BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
+          
           echo "=========================================="
           echo "🔢 GENERANDO BUILD NUMBER"
           echo "=========================================="
           echo "Timestamp: $TIMESTAMP"
-          echo "Build Number generado: $FLUTTER_BUILD_NUMBER"
+          echo "Build Number generado: $BUILD_NUMBER"
           echo "Último build number usado: $LAST_BUILD_NUMBER"
           echo "Este número es único y mayor que cualquier build anterior"
           echo "=========================================="
-          # Guarda la variable para que esté disponible en los siguientes scripts
-          echo "FLUTTER_BUILD_NUMBER=$FLUTTER_BUILD_NUMBER" >> $CM_ENV
+          echo ""
+          echo "✅ Build number guardado en CM_ENV: FLUTTER_BUILD_NUMBER=$BUILD_NUMBER"
       - name: Set up iOS code signing (Automatic via App Store Connect)
         script: |
           set -e
@@ -67,27 +72,66 @@ workflows:
       - name: Build iOS IPA
         script: |
           set -e
+          # Cargar variables de entorno guardadas
+          if [ -f "$CM_ENV" ]; then
+            source "$CM_ENV"
+          fi
+          
           # Verificar que el build number se cargó correctamente
           if [ -z "$FLUTTER_BUILD_NUMBER" ]; then
-            echo "ERROR: FLUTTER_BUILD_NUMBER no está definido"
-            exit 1
+            echo "❌ ERROR: FLUTTER_BUILD_NUMBER no está definido"
+            echo "Generando build number de emergencia..."
+            TIMESTAMP=$(date +%s)
+            FLUTTER_BUILD_NUMBER=${TIMESTAMP: -9}
+            FLUTTER_BUILD_NUMBER=$((10#$FLUTTER_BUILD_NUMBER))
+            if [ "$FLUTTER_BUILD_NUMBER" -le 6 ]; then
+              FLUTTER_BUILD_NUMBER=7
+            fi
+            export FLUTTER_BUILD_NUMBER="$FLUTTER_BUILD_NUMBER"
           fi
+          
           echo "=========================================="
           echo "🏗️  INFORMACIÓN DE BUILD"
           echo "=========================================="
           echo "Bundle ID: $APP_BUNDLE_IDENTIFIER"
           echo "Build Name (Version): $FLUTTER_BUILD_NAME"
-          echo "Build Number: $FLUTTER_BUILD_NUMBER"
+          echo "Build Number que se usará: $FLUTTER_BUILD_NUMBER"
           echo "=========================================="
+          echo ""
+          echo "Verificando que el build number sea válido..."
+          if [ "$FLUTTER_BUILD_NUMBER" -le 6 ]; then
+            echo "❌ ERROR: Build number ($FLUTTER_BUILD_NUMBER) debe ser mayor que 6"
+            exit 1
+          fi
+          echo "✅ Build number válido: $FLUTTER_BUILD_NUMBER"
           echo ""
           echo "Limpiando build anterior..."
           flutter clean
           echo ""
           echo "Compilando IPA con build number: $FLUTTER_BUILD_NUMBER"
+          echo "Usando: flutter build ipa --release --build-name=\"$FLUTTER_BUILD_NAME\" --build-number=\"$FLUTTER_BUILD_NUMBER\""
+          # Forzar que Flutter use el build number especificado, no el del pubspec.yaml
           flutter build ipa \
             --release \
             --build-name="$FLUTTER_BUILD_NAME" \
-            --build-number="$FLUTTER_BUILD_NUMBER"
+            --build-number="$FLUTTER_BUILD_NUMBER" \
+            --dart-define=FLUTTER_BUILD_NUMBER="$FLUTTER_BUILD_NUMBER"
+          
+          # Verificar que el build number se aplicó correctamente
+          echo ""
+          echo "Verificando build number en el IPA generado..."
+          IPA_PATH=$(find build/ios/ipa -name "*.ipa" | head -1)
+          if [ ! -z "$IPA_PATH" ]; then
+            unzip -q -o "$IPA_PATH" -d /tmp/ipa_check 2>/dev/null || true
+            ACTUAL_BUILD_NUMBER=$(/usr/libexec/PlistBuddy -c "Print :CFBundleVersion" /tmp/ipa_check/Payload/Runner.app/Info.plist 2>/dev/null || echo "")
+            echo "Build number en el IPA: $ACTUAL_BUILD_NUMBER"
+            echo "Build number esperado: $FLUTTER_BUILD_NUMBER"
+            if [ "$ACTUAL_BUILD_NUMBER" != "$FLUTTER_BUILD_NUMBER" ]; then
+              echo "❌ ERROR: El build number en el IPA ($ACTUAL_BUILD_NUMBER) no coincide con el esperado ($FLUTTER_BUILD_NUMBER)"
+              exit 1
+            fi
+            echo "✅ Build number correcto en el IPA"
+          fi
           echo ""
           echo "✅ Build completado"
       - name: Verify IPA file
