@@ -41,12 +41,33 @@ workflows:
           # Guardar en CM_ENV para que esté disponible en los siguientes scripts
           echo "FLUTTER_BUILD_NUMBER=$BUILD_NUMBER" >> $CM_ENV
           
+          # CRÍTICO: También modificar el pubspec.yaml temporalmente para que Flutter use el build number correcto
+          # Esto asegura que Flutter use el build number incluso si el parámetro --build-number no funciona
+          if [ -f "pubspec.yaml" ]; then
+            # Crear backup
+            cp pubspec.yaml pubspec.yaml.bak
+            # Modificar la línea de version
+            sed -i.tmp "s/^version:.*/version: $FLUTTER_BUILD_NAME+$BUILD_NUMBER/" pubspec.yaml
+            rm -f pubspec.yaml.tmp
+            # Verificar que se modificó correctamente
+            CURRENT_VERSION=$(grep "^version:" pubspec.yaml | awk '{print $2}')
+            echo "✅ pubspec.yaml actualizado: version=$CURRENT_VERSION"
+            if [ "$CURRENT_VERSION" != "$FLUTTER_BUILD_NAME+$BUILD_NUMBER" ]; then
+              echo "❌ ERROR: No se pudo actualizar pubspec.yaml correctamente"
+              exit 1
+            fi
+          else
+            echo "❌ ERROR: pubspec.yaml no existe"
+            exit 1
+          fi
+          
           echo "=========================================="
           echo "🔢 GENERANDO BUILD NUMBER"
           echo "=========================================="
           echo "Timestamp: $TIMESTAMP"
           echo "Build Number generado: $BUILD_NUMBER"
           echo "Último build number usado: $LAST_BUILD_NUMBER"
+          echo "pubspec.yaml actualizado: version=$FLUTTER_BUILD_NAME+$BUILD_NUMBER"
           echo "Este número es único y mayor que cualquier build anterior"
           echo "=========================================="
           echo ""
